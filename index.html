@@ -569,12 +569,14 @@ function initDOMElements() {
   histCanvas = document.getElementById("hist");
 }
 
+/* ===== FIX: timer now paints 00:00 immediately instead of waiting
+   for the first 1-second setInterval tick to fire ===== */
 function startTimer() {
   const arc = document.getElementById("timerArc");
   const text = document.getElementById("timerText");
   const circumference = 2 * Math.PI * 35;
 
-  timerInterval = setInterval(() => {
+  function tick() {
     const elapsed = Date.now() - gradingStartTime;
     const min = Math.floor(elapsed / 60000);
     const sec = Math.floor((elapsed % 60000) / 1000);
@@ -582,7 +584,10 @@ function startTimer() {
     if (text) text.innerText = String(min).padStart(2, "0") + ":" + String(sec).padStart(2, "0");
     const progress = Math.min(elapsed / 3600000, 1);
     if (arc) arc.style.strokeDashoffset = circumference * (1 - progress);
-  }, 1000);
+  }
+
+  tick();
+  timerInterval = setInterval(tick, 1000);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
