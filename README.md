@@ -4,7 +4,7 @@
 
 # \## Live Demo
 
-# Check out the deployed application here: \[https://college-submission.web.app/](https://college-submission.web.app/)
+# Check out the deployed application here: https://college-submission.web.app/
 
 # 
 
