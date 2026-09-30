@@ -4,7 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BITS Pilani Digital – Advanced Grading Console (CodeForge V2.0)</title>
+
+<!-- Data & Export Libraries -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.net/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.net/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <!-- Firebase App Compat SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -20,6 +24,33 @@
   --text: #111827;
   --text-muted: #6b7280;
   --accent-light: #ede9fe;
+  --input-bg: #ffffff;
+  --input-text: #0f172a;
+  --table-header-bg: #f8fafc;
+  --hover-bg: #f1f5f9;
+  --drop-border: #93c5fd;
+  --drop-bg: #eff6ff;
+}
+
+[data-theme="dark"] {
+  --primary: #818cf8;
+  --primary-dark: #a5b4fc;
+  --bg: #0f172a;
+  --card-bg: #1e293b;
+  --border: #334155;
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --accent-light: #312e81;
+  --input-bg: #0f172a;
+  --input-text: #f8fafc;
+  --table-header-bg: #1e293b;
+  --hover-bg: #334155;
+  --drop-border: #60a5fa;
+  --drop-bg: #1e293b;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
 body {
@@ -27,6 +58,7 @@ body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .container {
@@ -44,6 +76,7 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: background-color 0.2s ease;
 }
 
 .header-brand {
@@ -71,7 +104,64 @@ header h2 {
   color: var(--primary);
 }
 
-/* ===== CONTROLS ===== */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.theme-switch-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.theme-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.theme-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #cbd5e1;
+  transition: .3s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--primary);
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+/* ===== CONTROLS & DRAG DROP ===== */
 .controls {
   display: grid;
   grid-template-columns: 1fr 1.2fr 1fr;
@@ -81,6 +171,7 @@ header h2 {
   padding: 16px;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  transition: background-color 0.2s ease;
 }
 
 input, select {
@@ -89,14 +180,53 @@ input, select {
   border: 1px solid var(--border);
   font-size: 14px;
   outline: none;
-  background-color: #ffffff !important;
-  color: #0f172a !important;
+  background-color: var(--input-bg) !important;
+  color: var(--input-text) !important;
   font-weight: 600 !important;
   opacity: 1 !important;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+option {
+  background-color: var(--card-bg);
+  color: var(--text);
 }
 
 input:focus, select:focus {
   border-color: var(--primary);
+}
+
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  background: var(--bg);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
+
+.drop-zone.dragover {
+  border-color: var(--drop-border);
+  background: var(--drop-bg);
+}
+
+.drop-zone p {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.drop-zone span {
+  font-size: 11px;
+  color: var(--primary);
+  font-weight: 700;
 }
 
 .file-guidance {
@@ -105,7 +235,7 @@ input:focus, select:focus {
   padding: 10px;
   font-size: 12px;
   color: var(--text-muted);
-  background: #f9fafb;
+  background: var(--bg);
   border-radius: 8px;
 }
 
@@ -128,7 +258,11 @@ button {
   color: #fff;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 button:hover:not(:disabled) {
@@ -137,8 +271,13 @@ button:hover:not(:disabled) {
 }
 
 button.secondary {
-  background: #e5e7eb;
+  background: var(--border);
   color: var(--text);
+}
+
+button.danger {
+  background: #ef4444;
+  color: #fff;
 }
 
 button:disabled {
@@ -158,6 +297,7 @@ button:disabled {
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  transition: background-color 0.2s ease;
 }
 
 .panel-title {
@@ -178,12 +318,13 @@ button:disabled {
 }
 
 .stat {
-  background: #f8fafc;
+  background: var(--bg);
   border-radius: 8px;
   padding: 8px;
   font-size: 12px;
   text-align: center;
   border: 1px solid var(--border);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .stat b {
@@ -208,11 +349,11 @@ button:disabled {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform .2s ease, background-color .2s ease;
+  transition: transform .2s ease, background-color .2s ease, filter .2s ease;
 }
 
 .grade-summary span:hover {
-  background: #ddd6fe;
+  filter: brightness(0.95);
 }
 
 .grade-grid {
@@ -225,14 +366,14 @@ button:disabled {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px;
-  background: #ffffff;
-  transition: transform .25s ease, box-shadow .25s ease;
+  background: var(--card-bg);
+  transition: transform .25s ease, box-shadow .25s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .grade label {
   font-size: 11px;
   font-weight: 700;
-  color: #334155;
+  color: var(--text-muted);
   display: block;
   margin-top: 4px;
   margin-bottom: 2px;
@@ -244,20 +385,20 @@ button:disabled {
   width: 100%;
   padding: 6px 8px;
   border-radius: 6px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border);
   font-size: 14px !important;
   font-weight: 700 !important;
-  color: #0f172a !important;
-  background-color: #ffffff !important;
-  opacity: 1 !important;
   cursor: pointer;
 }
 
-.min select { background: #fff7ed !important; border-color: #fed7aa; }
-.max select { background: #eff6ff !important; border-color: #bfdbfe; }
+.min select { background: #fff7ed !important; border-color: #fed7aa; color: #9a3412 !important; }
+.max select { background: #eff6ff !important; border-color: #bfdbfe; color: #1e40af !important; }
+
+[data-theme="dark"] .min select { background: #431407 !important; border-color: #7c2d12; color: #ffedd5 !important; }
+[data-theme="dark"] .max select { background: #172554 !important; border-color: #1e3a8a; color: #dbeafe !important; }
 
 .error {
-  color: #b91c1c;
+  color: #ef4444;
   font-size: 13px;
   margin-top: 8px;
   font-weight: 500;
@@ -266,15 +407,16 @@ button:disabled {
 .notice {
   margin-top: 10px;
   font-size: 13px;
-  color: #065f46;
+  color: #10b981;
   font-weight: 500;
 }
 
 .actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   margin-top: 14px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 /* PRESET BUTTONS */
@@ -289,13 +431,13 @@ button:disabled {
   padding: 6px 10px;
   font-size: 11px;
   border-radius: 6px;
-  background: #f1f5f9;
-  color: #334155;
-  border: 1px solid #cbd5e1;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
 }
 
 .preset-btn:hover {
-  background: #e2e8f0;
+  background: var(--hover-bg);
 }
 
 /* STUDENT ROSTER TABLE FIXES */
@@ -305,6 +447,7 @@ button:disabled {
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  transition: background-color 0.2s ease;
 }
 
 .roster-header {
@@ -312,10 +455,18 @@ button:disabled {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.roster-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .roster-table-wrapper {
-  max-height: 220px;
+  max-height: 280px;
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -334,7 +485,7 @@ th, td {
 }
 
 th {
-  background: #f8fafc;
+  background: var(--table-header-bg);
   position: sticky;
   top: 0;
   z-index: 2;
@@ -356,9 +507,72 @@ th {
   color: #92400e;
 }
 
+.badge.override {
+  background: #fce7f3;
+  color: #9d174d;
+}
+
 .badge.neutral {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--bg);
+  color: var(--text-muted);
+}
+
+/* ===== MODAL & AUDIT TRAIL ===== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.modal-backdrop.active {
+  display: flex;
+}
+
+.modal {
+  background: var(--card-bg);
+  padding: 20px;
+  border-radius: 12px;
+  width: 420px;
+  max-width: 90%;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.modal h3 {
+  margin-top: 0;
+  color: var(--primary-dark);
+}
+
+.audit-container {
+  margin-top: 16px;
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  transition: background-color 0.2s ease;
+}
+
+.audit-log-list {
+  max-height: 150px;
+  overflow-y: auto;
+  font-size: 12px;
+  font-family: monospace;
+  background: var(--bg);
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.audit-log-item {
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.audit-log-item:last-child {
+  border-bottom: none;
 }
 
 /* ===== ANIMATIONS ===== */
@@ -373,7 +587,6 @@ button.enabled {
 
 .grade-summary span.pulse {
   transform: scale(1.08);
-  background: #ddd6fe;
 }
 
 /* ===== TIMER CLOCK ===== */
@@ -417,18 +630,33 @@ button.enabled {
       <h2>Advanced Grading Console v2.0</h2>
     </div>
   </div>
-  <div id="welcome" class="notice"></div>
+  <div class="header-actions">
+    <div class="theme-switch-wrapper">
+      <span>🌙 Dark Mode</span>
+      <label class="theme-switch">
+        <input type="checkbox" id="themeToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div id="welcome" class="notice"></div>
+  </div>
 </header>
 
 <div class="controls">
   <input id="instructor" placeholder="Instructor name (mandatory)">
-  <input type="file" id="file" accept=".xlsx, .xls">
+  
+  <div class="drop-zone" id="dropZone">
+    <p>📁 Drag & Drop Marks File (.xlsx, .xls)</p>
+    <span>or click to browse file</span>
+    <input type="file" id="file" accept=".xlsx, .xls" style="display:none;">
+  </div>
+
   <select id="course"><option value="">Select Course / Program to begin</option></select>
 
   <details class="file-guidance">
-    <summary>Marks file format guidance</summary>
-    <p>Supports files with columns: <b>BITS ID</b>, <b>Course/Program</b>, and <b>Total Marks</b>.</p>
-    <p>Includes safety handling for 4-column test files (imported grades), rounding decimals, clamping out-of-bound marks, and mapping non-numeric entries as NC.</p>
+    <summary>Marks file format guidance & Shortcuts</summary>
+    <p><b>Supported format:</b> BITS ID, Course/Program, and Total Marks.</p>
+    <p><b>Keyboard Shortcuts:</b> <code>Ctrl/Cmd + S</code> (Save/Export Excel), <code>Esc</code> (Clear search filters).</p>
   </details>
 </div>
 
@@ -450,7 +678,7 @@ button.enabled {
   </div>
 
   <!-- RIGHT: GRADING CONTROLS -->
-  <div class="panel">
+  <div class="panel" id="pdfReportPanel">
     <div class="panel-title">Grade Bands & Cutoffs</div>
     
     <div class="preset-bar">
@@ -465,7 +693,8 @@ button.enabled {
 
     <div class="actions">
       <button type="button" class="secondary" id="resetRanges">Reset Default</button>
-      <button type="button" id="download" disabled>Finalize & Download CSV</button>
+      <button type="button" id="download" disabled>Finalize & Export Excel (.xlsx)</button>
+      <button type="button" class="secondary" id="downloadPdf" disabled>PDF Report</button>
     </div>
 
     <div class="timer-wrapper">
@@ -484,47 +713,78 @@ button.enabled {
   </div>
 </div>
 
+<!-- ROSTER PREVIEW CONTAINER -->
 <div class="roster-container">
   <div class="roster-header">
     <div style="font-weight:700; color:var(--primary-dark)">Live Student Roster Preview</div>
-    <div>
+    <div class="roster-actions">
+      <button type="button" class="secondary" style="padding:4px 8px; font-size:12px;" onclick="toggleBulkAbsent()">Toggle Bulk NC/Absent</button>
       <input type="text" id="rosterSearch" placeholder="Filter BITS ID or Grade..." style="padding:4px 8px; font-size:12px;" oninput="renderRoster()">
-      <button type="button" class="secondary" style="padding:4px 8px; font-size:12px;" onclick="activeGradeFilter=null; renderRoster();">Clear Filter</button>
+      <button type="button" class="secondary" style="padding:4px 8px; font-size:12px;" onclick="clearFilters()">Clear Filter</button>
     </div>
   </div>
   <div class="roster-table-wrapper">
     <table>
       <thead>
         <tr id="rosterHeadRow">
+          <th><input type="checkbox" id="selectAllRoster" onclick="toggleSelectAll(this)"></th>
           <th>BITS ID</th>
           <th>Total Marks</th>
           <th>Calculated Grade</th>
+          <th>Status / Override</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody id="rosterBody">
-        <tr><td colspan="3" style="text-align:center; color:var(--text-muted)">Upload a file and select a course to preview roster.</td></tr>
+        <tr><td colspan="6" style="text-align:center; color:var(--text-muted)">Upload a file and select a course to preview roster.</td></tr>
       </tbody>
     </table>
   </div>
 </div>
 
+<!-- AUDIT LOG PANEL -->
+<div class="audit-container">
+  <details>
+    <summary style="font-weight:700; color:var(--primary-dark); cursor:pointer;">Administrative Audit Trail / Revision History</summary>
+    <div class="audit-log-list" id="auditLog" style="margin-top:10px;">
+      <div class="audit-log-item">[System initialized] Waiting for actions...</div>
+    </div>
+  </details>
+</div>
+
+</div>
+
+<!-- OVERRIDE MODAL -->
+<div class="modal-backdrop" id="overrideModal">
+  <div class="modal">
+    <h3>Grade Override for <span id="overrideStudentId"></span></h3>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">Override Grade:</label>
+      <select id="overrideGradeSelect" style="width:100%;">
+        <option value="A">A</option>
+        <option value="A-">A-</option>
+        <option value="B">B</option>
+        <option value="B-">B-</option>
+        <option value="C">C</option>
+        <option value="C-">C-</option>
+        <option value="D">D</option>
+        <option value="E">E</option>
+        <option value="I">I (Incomplete)</option>
+        <option value="NC">NC (Not Cleared)</option>
+      </select>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">Reason for Override (Mandatory):</label>
+      <input type="text" id="overrideReasonInput" placeholder="e.g., Medical Exception / Re-evaluation" style="width:100%;">
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:8px;">
+      <button type="button" class="secondary" onclick="closeOverrideModal()">Cancel</button>
+      <button type="button" onclick="saveOverride()">Save Override</button>
+    </div>
+  </div>
 </div>
 
 <script>
-/* ===== INITIALIZE FIREBASE ===== */
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "college-submission.firebaseapp.com",
-  projectId: "college-submission",
-  storageBucket: "college-submission.firebasestorage.app",
-  messagingSenderId: "290201391908",
-  appId: "YOUR_APP_ID"
-};
-
-if (typeof firebase !== "undefined" && firebase.apps && !firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
-}
-
 /* ===== GLOBAL DATA AND CONSTANTS ===== */
 const GRADES = ["A", "A-", "B", "B-", "C", "C-", "D", "E"];
 const DEFAULTS = {
@@ -543,10 +803,17 @@ const gradingStartTime = Date.now();
 let timerInterval = null;
 let currentAnimId = null;
 
+// State Collections
+let gradeOverrides = {};
+let absentOverrides = {};
+let selectedStudents = new Set();
+let currentEditingStudentId = null;
+
 /* ===== DOM ELEMS ===== */
 let fileInput, courseSelect, instructorInput, welcomeText, gradesDiv, rangeErrorDiv;
-let downloadBtn, resetRangesBtn, minValEl, maxValEl, avgValEl, medValEl;
+let downloadBtn, downloadPdfBtn, resetRangesBtn, minValEl, maxValEl, avgValEl, medValEl;
 let gradeSummaryDiv, rosterSearchInput, rosterHeadRowEl, rosterBodyEl, thankyouText, histCanvas;
+let dropZone, themeToggle, auditLogEl;
 
 function initDOMElements() {
   fileInput = document.getElementById("file");
@@ -556,6 +823,7 @@ function initDOMElements() {
   gradesDiv = document.getElementById("grades");
   rangeErrorDiv = document.getElementById("rangeError");
   downloadBtn = document.getElementById("download");
+  downloadPdfBtn = document.getElementById("downloadPdf");
   resetRangesBtn = document.getElementById("resetRanges");
   minValEl = document.getElementById("minVal");
   maxValEl = document.getElementById("maxVal");
@@ -567,10 +835,97 @@ function initDOMElements() {
   rosterBodyEl = document.getElementById("rosterBody");
   thankyouText = document.getElementById("thankyou");
   histCanvas = document.getElementById("hist");
+  dropZone = document.getElementById("dropZone");
+  themeToggle = document.getElementById("themeToggle");
+  auditLogEl = document.getElementById("auditLog");
 }
 
-/* ===== FIX: timer now paints 00:00 immediately instead of waiting
-   for the first 1-second setInterval tick to fire ===== */
+function resetCourseState() {
+  gradeOverrides = {};
+  absentOverrides = {};
+  selectedStudents.clear();
+  activeGradeFilter = null;
+  if (rosterSearchInput) rosterSearchInput.value = "";
+}
+
+function initThemeAndShortcuts() {
+  const savedTheme = localStorage.getItem("console_theme") || "light";
+  if (savedTheme === "dark") {
+    document.documentElement.setAttribute("data-theme", "dark");
+    themeToggle.checked = true;
+  }
+
+  themeToggle.addEventListener("change", (e) => {
+    if (e.target.checked) {
+      document.documentElement.setAttribute("data-theme", "dark");
+      localStorage.setItem("console_theme", "dark");
+    } else {
+      document.documentElement.setAttribute("data-theme", "light");
+      localStorage.setItem("console_theme", "light");
+    }
+    drawHistogram();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      if (!downloadBtn.disabled) handleDownload();
+    }
+    if (e.key === 'Escape') {
+      clearFilters();
+    }
+  });
+}
+
+function clearFilters() {
+  activeGradeFilter = null;
+  rosterSearchInput.value = "";
+  renderRoster();
+}
+
+function logAudit(action) {
+  const time = new Date().toLocaleTimeString();
+  const instructor = instructorInput.value || "Instructor";
+  const item = document.createElement("div");
+  item.className = "audit-log-item";
+  item.innerText = `[${time}] ${instructor}: ${action}`;
+  auditLogEl.prepend(item);
+}
+
+function initDragAndDrop() {
+  dropZone.onclick = () => fileInput.click();
+
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+  });
+
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    if (files.length) {
+      fileInput.files = files;
+      processFile(files[0]);
+    }
+  });
+
+  fileInput.onchange = (e) => {
+    if (e.target.files.length) processFile(e.target.files[0]);
+  };
+}
+
 function startTimer() {
   const arc = document.getElementById("timerArc");
   const text = document.getElementById("timerText");
@@ -592,17 +947,18 @@ function startTimer() {
 
 document.addEventListener("DOMContentLoaded", () => {
   initDOMElements();
+  initThemeAndShortcuts();
+  initDragAndDrop();
   startTimer();
 
-  fileInput.onchange = handleFileUpload;
   courseSelect.onchange = handleCourseChange;
   resetRangesBtn.onclick = handleResetRanges;
   downloadBtn.onclick = handleDownload;
+  downloadPdfBtn.onclick = handleDownloadPdf;
   
   buildGradeUI();
 });
 
-/* ===== SANITIZE MARKS ===== */
 function sanitizeMark(rawMark) {
   if (rawMark === null || rawMark === undefined || rawMark === "") {
     return { valid: false, reason: "NC", value: null, raw: rawMark };
@@ -623,11 +979,11 @@ function sanitizeMark(rawMark) {
   return { valid: true, value: num, raw: rawMark };
 }
 
-function handleFileUpload(e) {
-  if (!e.target.files.length) return;
+function processFile(file) {
+  resetCourseState();
   const r = new FileReader();
   r.onload = ev => {
-    const wb = XLSX.read(ev.target.result, { type: "binary" });
+    const wb = XLSX.read(ev.target.result, { type: "array" });
     data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
     
     courseSelect.innerHTML = '<option value="">Select Course / Program to begin</option>';
@@ -639,12 +995,15 @@ function handleFileUpload(e) {
       importedGradeKey = keys.find(k => /grade/i.test(k) && k !== courseKey) || null;
     }
 
-    const uniqueCourses = [...new Set(data.map(d => d[courseKey]))];
+    const uniqueCourses = [...new Set(data.map(d => String(d[courseKey])))];
     uniqueCourses.forEach(c => {
-      if (c) courseSelect.add(new Option(c, c));
+      if (c && c !== 'undefined') courseSelect.add(new Option(c, c));
     });
+
+    dropZone.querySelector('p').innerText = `📄 ${file.name}`;
+    logAudit(`Uploaded marks file "${file.name}"`);
   };
-  r.readAsBinaryString(e.target.files[0]);
+  r.readAsArrayBuffer(file);
 }
 
 function handleCourseChange() {
@@ -653,15 +1012,26 @@ function handleCourseChange() {
     courseSelect.value = "";
     return;
   }
+  resetCourseState();
   welcomeText.innerText = `Welcome ${instructorInput.value.toUpperCase()}. Please review and finalize grading.`;
+  logAudit(`Selected course ${courseSelect.value}`);
   updateAll();
 }
 
+/* Fixed Cascade Cutoffs logic */
 function cascadeMaxFrom(index) {
   for (let i = index + 1; i < GRADES.length; i++) {
     const prevMin = +document.getElementById(GRADES[i - 1] + "min").value;
     const maxElem = document.getElementById(GRADES[i] + "max");
-    if (maxElem) maxElem.value = Math.max(0, prevMin - 1);
+    const minElem = document.getElementById(GRADES[i] + "min");
+    
+    if (maxElem) {
+      const newMax = Math.max(0, prevMin - 1);
+      maxElem.value = newMax;
+      if (minElem && +minElem.value > newMax) {
+        minElem.value = Math.max(0, newMax - 10);
+      }
+    }
   }
 }
 
@@ -676,8 +1046,13 @@ function buildGradeUI() {
     const maxSel = document.createElement("select");
 
     for (let i = 0; i <= 100; i++) {
-      minSel.add(new Option(i, i, i === DEFAULTS[g][0], i === DEFAULTS[g][0]));
-      maxSel.add(new Option(i, i, i === DEFAULTS[g][1], i === DEFAULTS[g][1]));
+      const optMin = new Option(i, i);
+      if (i === DEFAULTS[g][0]) optMin.selected = true;
+      minSel.add(optMin);
+
+      const optMax = new Option(i, i);
+      if (i === DEFAULTS[g][1]) optMax.selected = true;
+      maxSel.add(optMax);
     }
 
     minSel.id = g + "min";
@@ -687,12 +1062,14 @@ function buildGradeUI() {
       card.classList.add("lift");
       setTimeout(() => card.classList.remove("lift"), 150);
       cascadeMaxFrom(idx);
+      logAudit(`Modified ${g} minimum cutoff to ${minSel.value}`);
       updateAll();
     };
 
     maxSel.onchange = () => {
       card.classList.add("lift");
       setTimeout(() => card.classList.remove("lift"), 150);
+      logAudit(`Modified ${g} maximum cutoff to ${maxSel.value}`);
       updateAll();
     };
 
@@ -715,6 +1092,7 @@ function handleResetRanges() {
     document.getElementById(g + "min").value = DEFAULTS[g][0];
     document.getElementById(g + "max").value = DEFAULTS[g][1];
   });
+  logAudit("Reset grade ranges to system defaults");
   updateAll();
 }
 
@@ -729,6 +1107,7 @@ function applyPreset(type) {
     document.getElementById(g + "min").value = set[g][0];
     document.getElementById(g + "max").value = set[g][1];
   });
+  logAudit(`Applied preset "${type}"`);
   updateAll();
 }
 
@@ -746,18 +1125,23 @@ function validateRanges() {
   return "";
 }
 
-function getGradeForMark(markInfo) {
+/* Fixed Grade assignment bounds */
+function getGradeForMark(studentId, markInfo) {
+  if (absentOverrides[studentId]) return "NC";
+  if (gradeOverrides[studentId]) return gradeOverrides[studentId].grade;
   if (!markInfo.valid) return "NC";
-  const val = markInfo.value;
   
-  if (val >= +document.getElementById("Amin").value) return "A";
-  if (val <= +document.getElementById("Emax").value) return "E";
+  const val = markInfo.value;
 
   for (const g of GRADES) {
     const mi = +document.getElementById(g + "min").value;
     const ma = +document.getElementById(g + "max").value;
     if (val >= mi && val <= ma) return g;
   }
+  
+  if (val > +document.getElementById("Amax").value) return "A";
+  if (val < +document.getElementById("Emin").value) return "E";
+
   return "NC";
 }
 
@@ -765,25 +1149,39 @@ function updateAll() {
   if (!courseSelect || !courseSelect.value) return;
   const err = validateRanges();
   rangeErrorDiv.innerText = err;
+  
   downloadBtn.disabled = !!err;
-  if (!err) downloadBtn.classList.add("enabled");
-  else downloadBtn.classList.remove("enabled");
+  downloadPdfBtn.disabled = !!err;
+  
+  if (!err) {
+    downloadBtn.classList.add("enabled");
+    downloadPdfBtn.classList.add("enabled");
+  } else {
+    downloadBtn.classList.remove("enabled");
+    downloadPdfBtn.classList.remove("enabled");
+  }
+
   drawHistogram();
   computeStats();
   computeGradeSummary();
   renderRoster();
 }
 
+/* Fixed Loose equality string matching */
 function getValidMarksForCourse() {
   if (!courseSelect) return [];
   return data
-    .filter(d => d[courseKey] === courseSelect.value)
-    .map(d => sanitizeMark(d[marksKey]))
+    .filter(d => String(d[courseKey]) === courseSelect.value)
+    .map(d => {
+      const idKey = Object.keys(d)[0];
+      const sId = d[idKey];
+      if (absentOverrides[sId]) return { valid: false };
+      return sanitizeMark(d[marksKey]);
+    })
     .filter(m => m.valid)
     .map(m => m.value);
 }
 
-/* ===== ENHANCED HISTOGRAM & SMOOTH FITTED CURVE ===== */
 function drawHistogram() {
   if (!histCanvas) return;
   const ctx = histCanvas.getContext("2d");
@@ -804,6 +1202,10 @@ function drawHistogram() {
   const maxFreq = Math.max(...bins, 1);
   let start = null;
 
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  const primaryColor = isDark ? "#818cf8" : "#5b3cc4";
+  const textColor = isDark ? "#94a3b8" : "#6b7280";
+
   function animate(ts) {
     if (!start) start = ts;
     const p = Math.min((ts - start) / 350, 1);
@@ -818,7 +1220,7 @@ function drawHistogram() {
       const radius = Math.min(4, h / 2);
 
       if (h > 0) {
-        ctx.fillStyle = "#5b3cc4";
+        ctx.fillStyle = primaryColor;
         ctx.beginPath();
         ctx.moveTo(x, y + h);
         ctx.lineTo(x, y + radius);
@@ -830,7 +1232,7 @@ function drawHistogram() {
         ctx.fill();
       }
 
-      ctx.fillStyle = "#6b7280";
+      ctx.fillStyle = textColor;
       ctx.font = "600 9px 'Segoe UI', sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(`${i * 10}-${i * 10 + 9}`, x + w / 2, 192);
@@ -847,6 +1249,8 @@ function drawHistogram() {
 
 function drawFittedCurve(ctx, bins, progress, maxFreq) {
   let totalN = bins.reduce((a, b) => a + b, 0);
+  if (totalN === 0) return;
+
   let weightedSum = bins.reduce((acc, count, idx) => acc + count * (idx * 10 + 5), 0);
   let mean = weightedSum / totalN;
 
@@ -882,7 +1286,6 @@ function drawFittedCurve(ctx, bins, progress, maxFreq) {
   ctx.stroke();
 }
 
-/* ===== ACCURATE STATS CALCULATION ===== */
 function computeStats() {
   const m = getValidMarksForCourse().sort((a, b) => a - b);
   
@@ -904,17 +1307,20 @@ function computeStats() {
 }
 
 function computeGradeSummary() {
-  let counts = { "NC": 0 }; 
+  let counts = { "NC": 0, "I": 0 }; 
   GRADES.forEach(g => counts[g] = 0);
 
-  data.filter(d => d[courseKey] === courseSelect.value).forEach(d => {
+  data.filter(d => String(d[courseKey]) === courseSelect.value).forEach(d => {
+    const idKey = Object.keys(d)[0];
+    const sId = d[idKey];
     const markInfo = sanitizeMark(d[marksKey]);
-    const g = getGradeForMark(markInfo);
+    const g = getGradeForMark(sId, markInfo);
     if (counts[g] !== undefined) counts[g]++;
   });
   
   gradeSummaryDiv.innerHTML = "";
-  [...GRADES, "NC"].forEach(g => {
+  [...GRADES, "NC", "I"].forEach(g => {
+    if (counts[g] === 0 && g === "I") return;
     const span = document.createElement("span");
     span.textContent = `${g}: ${counts[g]}`;
     span.onclick = () => { activeGradeFilter = g; renderRoster(); };
@@ -929,34 +1335,44 @@ function computeGradeSummary() {
 
 function renderRoster() {
   if (!courseSelect || !courseSelect.value) return;
-  const courseData = data.filter(d => d[courseKey] === courseSelect.value);
+  const courseData = data.filter(d => String(d[courseKey]) === courseSelect.value);
   const search = rosterSearchInput.value.toLowerCase();
-  
+
+  const visibleStudentIds = courseData.map(d => String(d[Object.keys(d)[0]]));
+  const allSelected = visibleStudentIds.length > 0 && visibleStudentIds.every(id => selectedStudents.has(id));
+
   if (importedGradeKey) {
     rosterHeadRowEl.innerHTML = `
+      <th><input type="checkbox" id="selectAllRoster" ${allSelected ? 'checked' : ''} onclick="toggleSelectAll(this)"></th>
       <th>BITS ID</th>
       <th>Total Marks</th>
       <th>Imported Grade</th>
       <th>Calculated Grade</th>
+      <th>Status / Override</th>
+      <th>Actions</th>
     `;
   } else {
     rosterHeadRowEl.innerHTML = `
+      <th><input type="checkbox" id="selectAllRoster" ${allSelected ? 'checked' : ''} onclick="toggleSelectAll(this)"></th>
       <th>BITS ID</th>
       <th>Total Marks</th>
       <th>Calculated Grade</th>
+      <th>Status / Override</th>
+      <th>Actions</th>
     `;
   }
 
   const filtered = courseData.filter(d => {
-    const markInfo = sanitizeMark(d[marksKey]);
-    const g = getGradeForMark(markInfo);
     const idKey = Object.keys(d)[0];
-    const matchesSearch = String(d[idKey]).toLowerCase().includes(search) || g.toLowerCase().includes(search);
+    const sId = d[idKey];
+    const markInfo = sanitizeMark(d[marksKey]);
+    const g = getGradeForMark(sId, markInfo);
+    const matchesSearch = String(sId).toLowerCase().includes(search) || g.toLowerCase().includes(search);
     const matchesFilter = activeGradeFilter ? g === activeGradeFilter : true;
     return matchesSearch && matchesFilter;
   });
 
-  const colSpan = importedGradeKey ? 4 : 3;
+  const colSpan = importedGradeKey ? 7 : 6;
 
   if (!filtered.length) {
     rosterBodyEl.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; color:var(--text-muted)">No matching records found.</td></tr>`;
@@ -965,28 +1381,110 @@ function renderRoster() {
 
   rosterBodyEl.innerHTML = filtered.map(d => {
     const idKey = Object.keys(d)[0];
+    const sId = d[idKey];
     const markInfo = sanitizeMark(d[marksKey]);
-    const g = getGradeForMark(markInfo);
+    const g = getGradeForMark(sId, markInfo);
     
     let displayMark = d[marksKey] !== undefined && d[marksKey] !== null ? d[marksKey] : "Empty";
-    let badgeClass = g === "NC" ? "badge warning" : "badge";
+    let badgeClass = "badge";
+    if (g === "NC") badgeClass = "badge warning";
+    if (gradeOverrides[sId]) badgeClass = "badge override";
 
-    if (importedGradeKey) {
-      const impGrade = d[importedGradeKey] || "N/A";
-      return `<tr>
-        <td><b>${d[idKey]}</b></td>
-        <td>${displayMark}</td>
-        <td><span class="badge neutral">${impGrade}</span></td>
-        <td><span class="${badgeClass}">${g}</span></td>
-      </tr>`;
-    }
+    const isAbsent = absentOverrides[sId] ? "checked" : "";
+    const isChecked = selectedStudents.has(String(sId)) ? "checked" : "";
+
+    const importedCol = importedGradeKey 
+      ? `<td><span class="badge neutral">${d[importedGradeKey] || 'N/A'}</span></td>` 
+      : '';
 
     return `<tr>
-      <td><b>${d[idKey]}</b></td>
+      <td><input type="checkbox" ${isChecked} onchange="toggleSelectStudent('${sId}', this.checked)"></td>
+      <td><b>${sId}</b></td>
       <td>${displayMark}</td>
-      <td><span class="${badgeClass}">${g}</span></td>
+      ${importedCol}
+      <td><span class="${badgeClass}">${g}</span> ${gradeOverrides[sId] ? `<small>(${gradeOverrides[sId].reason})</small>` : ''}</td>
+      <td>
+        <label style="font-size:12px; cursor:pointer;">
+          <input type="checkbox" ${isAbsent} onchange="toggleAbsent('${sId}', this.checked)"> Mark Absent
+        </label>
+      </td>
+      <td>
+        <button type="button" class="secondary" style="padding:2px 6px; font-size:11px;" onclick="openOverrideModal('${sId}')">Override</button>
+      </td>
     </tr>`;
   }).join("");
+}
+
+function toggleSelectStudent(studentId, checked) {
+  const strId = String(studentId);
+  if (checked) selectedStudents.add(strId);
+  else selectedStudents.delete(strId);
+  
+  const master = document.getElementById("selectAllRoster");
+  if (master) {
+    const courseData = data.filter(d => String(d[courseKey]) === courseSelect.value);
+    const visibleStudentIds = courseData.map(d => String(d[Object.keys(d)[0]]));
+    master.checked = visibleStudentIds.every(id => selectedStudents.has(id));
+  }
+}
+
+function toggleSelectAll(masterCert) {
+  const courseData = data.filter(d => String(d[courseKey]) === courseSelect.value);
+  courseData.forEach(d => {
+    const sId = String(d[Object.keys(d)[0]]);
+    if (masterCert.checked) selectedStudents.add(sId);
+    else selectedStudents.delete(sId);
+  });
+  renderRoster();
+}
+
+function toggleAbsent(studentId, isAbsent) {
+  absentOverrides[studentId] = isAbsent;
+  logAudit(`Toggled Absent status for ${studentId} to ${isAbsent}`);
+  updateAll();
+}
+
+function toggleBulkAbsent() {
+  if (!selectedStudents.size) {
+    alert("Please select students using checkboxes first.");
+    return;
+  }
+  selectedStudents.forEach(sId => {
+    absentOverrides[sId] = !absentOverrides[sId];
+  });
+  logAudit(`Bulk toggled absent status for ${selectedStudents.size} students`);
+  updateAll();
+}
+
+function openOverrideModal(studentId) {
+  currentEditingStudentId = studentId;
+  document.getElementById("overrideStudentId").innerText = studentId;
+  document.getElementById("overrideReasonInput").value = gradeOverrides[studentId]?.reason || "";
+  document.getElementById("overrideModal").classList.add("active");
+}
+
+function closeOverrideModal() {
+  document.getElementById("overrideModal").classList.remove("active");
+}
+
+function saveOverride() {
+  const reason = document.getElementById("overrideReasonInput").value.trim();
+  const overrideGrade = document.getElementById("overrideGradeSelect").value;
+  
+  if (!reason) {
+    alert("Reason for grade override is mandatory!");
+    return;
+  }
+
+  gradeOverrides[currentEditingStudentId] = {
+    grade: overrideGrade,
+    reason: reason,
+    timestamp: new Date().toISOString()
+  };
+
+  logAudit(`Overrode grade for ${currentEditingStudentId} to ${overrideGrade} (Reason: ${reason})`);
+  closeOverrideModal();
+  updateAll();
 }
 
 function handleDownload() {
@@ -997,20 +1495,49 @@ function handleDownload() {
   const minT = Math.floor(elapsed / 60000);
   const secT = Math.floor((elapsed % 60000) / 1000);
 
-  let csv = `Instructor,${instructorInput.value}\nCourse/Program,${courseSelect.value}\n\nBITS ID,Original Marks,Sanitized Marks,Calculated Grade\n`;
-  data.filter(d => d[courseKey] === courseSelect.value).forEach(d => {
+  const wb = XLSX.utils.book_new();
+
+  const summaryData = [
+    ["BITS Pilani Digital - Official Grading Summary Report"],
+    ["Instructor", instructorInput.value],
+    ["Course/Program", courseSelect.value],
+    ["Date", new Date().toLocaleDateString()],
+    [],
+    ["Key Class Statistics"],
+    ["Minimum Marks", minValEl.innerText],
+    ["Maximum Marks", maxValEl.innerText],
+    ["Average Marks", avgValEl.innerText],
+    ["Median Marks", medValEl.innerText],
+    [],
+    ["Grade Cutoffs & Bands"],
+    ...GRADES.map(g => [`Grade ${g}`, `${document.getElementById(g + "min").value} - ${document.getElementById(g + "max").value}`]),
+  ];
+  const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
+  XLSX.utils.book_append_sheet(wb, summaryWs, "Grade Summary");
+
+  const rosterRows = [
+    ["BITS ID", "Original Marks", "Sanitized Marks", "Final Grade", "Override Reason", "Absent Status"]
+  ];
+
+  data.filter(d => String(d[courseKey]) === courseSelect.value).forEach(d => {
     const idKey = Object.keys(d)[0];
+    const sId = d[idKey];
     const markInfo = sanitizeMark(d[marksKey]);
-    const g = getGradeForMark(markInfo);
+    const finalG = getGradeForMark(sId, markInfo);
     const origMark = d[marksKey] !== undefined && d[marksKey] !== null ? d[marksKey] : "";
     const sanMark = markInfo.valid ? markInfo.value : markInfo.reason;
-    csv += `${d[idKey]},"${origMark}","${sanMark}",${g}\n`;
+    const overrideReason = gradeOverrides[sId] ? gradeOverrides[sId].reason : "";
+    const isAbs = absentOverrides[sId] ? "Yes" : "No";
+
+    rosterRows.push([sId, origMark, sanMark, finalG, overrideReason, isAbs]);
   });
 
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-  a.download = `${courseSelect.value}_Final_Grades.csv`;
-  a.click();
+  const rosterWs = XLSX.utils.aoa_to_sheet(rosterRows);
+  XLSX.utils.book_append_sheet(wb, rosterWs, "Student Roster");
+
+  XLSX.writeFile(wb, `${courseSelect.value}_Final_Grades.xlsx`);
+
+  logAudit("Exported Excel (.xlsx) final grades workbook");
 
   if (finalizeCount === 1) {
     thankyouText.innerText = `You completed grading in ${minT} min ${secT} sec in your first attempt.`;
@@ -1018,6 +1545,61 @@ function handleDownload() {
     const suffix = finalizeCount === 2 ? "second" : finalizeCount === 3 ? "third" : finalizeCount + "th";
     thankyouText.innerText = `You took a total of ${minT} min ${secT} sec to complete the grading in your ${suffix} attempt.`;
   }
+}
+
+/* Fixed PDF rendering attachment bug */
+function handleDownloadPdf() {
+  const element = document.createElement("div");
+  element.style.padding = "20px";
+  element.style.fontFamily = "Arial, sans-serif";
+  element.style.background = "#ffffff";
+  element.style.color = "#000000";
+
+  let canvasImg = "";
+  try {
+    canvasImg = histCanvas.toDataURL("image/png");
+  } catch (e) {
+    console.warn("Canvas export failed or canvas is blank", e);
+  }
+
+  element.innerHTML = `
+    <h2 style="color:#312e81; border-bottom:2px solid #5b3cc4; padding-bottom:8px;">BITS Pilani Digital - Official Summary Report</h2>
+    <p><b>Instructor:</b> ${instructorInput.value}</p>
+    <p><b>Course:</b> ${courseSelect.value}</p>
+    <p><b>Date:</b> ${new Date().toLocaleString()}</p>
+    <hr>
+    <h3>Class Statistics</h3>
+    <ul>
+      <li><b>Min:</b> ${minValEl.innerText}</li>
+      <li><b>Max:</b> ${maxValEl.innerText}</li>
+      <li><b>Average:</b> ${avgValEl.innerText}</li>
+      <li><b>Median:</b> ${medValEl.innerText}</li>
+    </ul>
+    <h3>Histogram & Distribution Chart</h3>
+    ${canvasImg ? `<img src="${canvasImg}" style="width:100%; max-width:400px; border:1px solid #ccc; border-radius:8px;">` : '<p><i>No chart rendered</i></p>'}
+    <h3>Grade Counts</h3>
+    <p>${gradeSummaryDiv.innerText}</p>
+  `;
+
+  document.body.appendChild(element);
+
+  const opt = {
+    margin:       0.5,
+    filename:     `${courseSelect.value}_Summary_Report.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2 },
+    jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(element).save().then(() => {
+    document.body.removeChild(element);
+  }).catch(() => {
+    if (document.body.contains(element)) {
+      document.body.removeChild(element);
+    }
+  });
+
+  logAudit("Generated print-ready PDF Summary Report");
 }
 </script>
 </body>
