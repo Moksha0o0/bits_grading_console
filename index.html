@@ -26,6 +26,7 @@
   --hover-bg: #f1f5f9;
   --drop-border: #93c5fd;
   --drop-bg: #eff6ff;
+  --highlight-accent: #6d28d9;
 }
 
 [data-theme="dark"] {
@@ -43,6 +44,7 @@
   --hover-bg: #334155;
   --drop-border: #60a5fa;
   --drop-bg: #1e293b;
+  --highlight-accent: #c084fc;
 }
 
 *, *::before, *::after {
@@ -212,6 +214,7 @@ input:focus, select:focus {
   justify-content: center;
   align-items: center;
   gap: 4px;
+  position: relative;
 }
 
 .drop-zone.dragover {
@@ -230,6 +233,22 @@ input:focus, select:focus {
   font-size: 11px;
   color: var(--primary);
   font-weight: 700;
+}
+
+/* Spinner for file loading state */
+.spinner-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 3px solid rgba(91, 60, 196, 0.2);
+  border-radius: 50%;
+  border-top-color: var(--primary);
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 2px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .file-guidance {
@@ -342,33 +361,57 @@ button:disabled {
   margin-top: 2px;
 }
 
+/* ===== ENHANCED FILTER PROMPT & SUMMARY ===== */
+.filter-instruction-bar {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--highlight-accent);
+  background: var(--accent-light);
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-left: 4px solid var(--primary);
+}
+
 .grade-summary {
-  margin-top: 12px;
+  margin-top: 8px;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 .grade-summary span {
-  background: var(--accent-light);
+  background: var(--card-bg);
   color: var(--primary-dark);
-  padding: 6px 12px;
+  border: 1.5px solid var(--primary);
+  padding: 7px 14px;
   border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
-  transition: transform .2s ease, background-color .2s ease, filter .2s ease;
+  transition: all 0.2s ease;
   user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
 }
 
 .grade-summary span:hover {
-  filter: brightness(0.95);
+  transform: translateY(-2px);
+  background: var(--accent-light);
+  box-shadow: 0 4px 10px rgba(91, 60, 196, 0.2);
 }
 
 .grade-summary span.active-filter {
-  background: var(--primary-dark);
+  background: var(--primary);
   color: #ffffff;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  border-color: var(--primary-dark);
+  box-shadow: 0 3px 8px rgba(91, 60, 196, 0.4);
 }
 
 .grade-grid {
@@ -656,8 +699,10 @@ button.enabled {
   <input id="instructor" placeholder="Instructor name (mandatory)">
   
   <div class="drop-zone" id="dropZone">
-    <p>📁 Drag & Drop Marks File (.xlsx, .xls)</p>
-    <span>or click to browse file</span>
+    <div id="dropZoneContent">
+      <p>📁 Drag & Drop Marks File (.xlsx, .xls)</p>
+      <span>or click to browse file</span>
+    </div>
     <input type="file" id="file" accept=".xlsx, .xls" style="display:none;">
   </div>
 
@@ -683,7 +728,11 @@ button.enabled {
       <div class="stat">Median<br><b id="medVal">-</b></div>
     </div>
 
-    <div style="margin-top:14px; font-weight:600; font-size:12px; color:var(--text-muted)">Grade Counts (Click to filter roster):</div>
+    <!-- ENHANCED PROMPT FOR MULTI-GRADE FILTERING -->
+    <div class="filter-instruction-bar">
+      <span>🔍 Click Grades Below to Filter Roster (Multi-Select):</span>
+      <span id="activeFilterBadge" style="font-size:11px; background:var(--primary); color:#fff; padding:2px 8px; border-radius:10px;">All</span>
+    </div>
     <div class="grade-summary" id="gradeSummary"></div>
 
     <div class="actions">
@@ -839,7 +888,7 @@ let currentEditingStudentId = null;
 let fileInput, courseSelect, instructorInput, welcomeText, gradesDiv, rangeErrorDiv;
 let downloadBtn, downloadPdfBtn, resetRangesBtn, minValEl, maxValEl, avgValEl, medValEl;
 let gradeSummaryDiv, rosterSearchInput, rosterHeadRowEl, rosterBodyEl, thankyouText, histCanvas;
-let dropZone, themeToggle, auditLogEl;
+let dropZone, themeToggle, auditLogEl, dropZoneContent;
 
 function initDOMElements() {
   fileInput = document.getElementById("file");
@@ -862,6 +911,7 @@ function initDOMElements() {
   thankyouText = document.getElementById("thankyou");
   histCanvas = document.getElementById("hist");
   dropZone = document.getElementById("dropZone");
+  dropZoneContent = document.getElementById("dropZoneContent");
   themeToggle = document.getElementById("themeToggle");
   auditLogEl = document.getElementById("auditLog");
 }
@@ -920,7 +970,26 @@ function logAudit(action) {
 }
 
 function initDragAndDrop() {
-  dropZone.onclick = () => fileInput.click();
+  dropZone.onclick = () => {
+    dropZoneContent.innerHTML = `
+      <div class="spinner-icon"></div>
+      <p style="color:var(--primary);">Opening file picker...</p>
+      <span>Please select an Excel file</span>
+    `;
+    
+    fileInput.click();
+
+    window.addEventListener('focus', resetDropZoneText, { once: true });
+  };
+
+  function resetDropZoneText() {
+    if (!fileInput.files || fileInput.files.length === 0) {
+      dropZoneContent.innerHTML = `
+        <p>📁 Drag & Drop Marks File (.xlsx, .xls)</p>
+        <span>or click to browse file</span>
+      `;
+    }
+  }
 
   ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
     dropZone.addEventListener(eventName, preventDefaults, false);
@@ -1046,11 +1115,12 @@ function processFile(file) {
         courseSelect.value = uniqueCourses[0];
       }
 
-      dropZone.querySelector('p').innerText = `📄 ${file.name}`;
+      dropZoneContent.innerHTML = `<p>📄 Loaded: ${file.name}</p><span>Click to change file</span>`;
       logAudit(`Uploaded marks file "${file.name}" (${data.length} records)`);
       updateAll();
     } catch (e) {
       alert("Error reading file. Please ensure it is a valid .xlsx or .xls file.");
+      dropZoneContent.innerHTML = `<p>📁 Drag & Drop Marks File (.xlsx, .xls)</p><span>or click to browse file</span>`;
     }
   };
   r.readAsArrayBuffer(file);
@@ -1254,40 +1324,48 @@ function drawHistogram() {
   const primaryColor = isDark ? "#818cf8" : "#5b3cc4";
   const textColor = isDark ? "#94a3b8" : "#6b7280";
 
+  // Dimensions for pixel alignment
+  const barWidth = 26;
+  const gap = 11;
+  const startX = 20;
+  const baselineY = 175;
+  const maxBarHeight = 120;
+
   function animate(ts) {
     if (!start) start = ts;
     const p = Math.min((ts - start) / 350, 1);
     ctx.clearRect(0, 0, 400, 220);
 
+    // Draw Histogram Bars
     bins.forEach((v, i) => {
-      const maxBarHeight = 120;
       const h = (v / maxFreq) * maxBarHeight * p;
-      const x = 32 + i * 35;
-      const y = 175 - h;
-      const w = 24;
+      const x = startX + i * (barWidth + gap);
+      const y = baselineY - h;
       const radius = Math.min(4, h / 2);
 
       if (h > 0) {
         ctx.fillStyle = primaryColor;
         ctx.beginPath();
-        ctx.moveTo(x, y + h);
+        ctx.moveTo(x, baselineY);
         ctx.lineTo(x, y + radius);
         ctx.quadraticCurveTo(x, y, x + radius, y);
-        ctx.lineTo(x + w - radius, y);
-        ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
-        ctx.lineTo(x + w, y + h);
+        ctx.lineTo(x + barWidth - radius, y);
+        ctx.quadraticCurveTo(x + barWidth, y, x + barWidth, y + radius);
+        ctx.lineTo(x + barWidth, baselineY);
         ctx.closePath();
         ctx.fill();
       }
 
+      // X-Axis Labels
       ctx.fillStyle = textColor;
-      ctx.font = "600 9px 'Segoe UI', sans-serif";
+      ctx.font = "600 10px 'Segoe UI', sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(`${i * 10}-${i * 10 + 9}`, x + w / 2, 192);
+      ctx.fillText(`${i * 10}-${i * 10 + 9}`, x + barWidth / 2, 192);
     });
 
+    // Draw Normal Distribution Curve
     if (marks.length >= 2) {
-      drawFittedCurve(ctx, bins, p, maxFreq);
+      drawFittedCurve(ctx, marks, p, maxFreq, startX, barWidth, gap, baselineY, maxBarHeight);
     }
 
     if (p < 1) currentAnimId = requestAnimationFrame(animate);
@@ -1295,43 +1373,45 @@ function drawHistogram() {
   currentAnimId = requestAnimationFrame(animate);
 }
 
-function drawFittedCurve(ctx, bins, progress, maxFreq) {
-  let totalN = bins.reduce((a, b) => a + b, 0);
-  if (totalN === 0) return;
+function drawFittedCurve(ctx, marks, progress, maxFreq, startX, barWidth, gap, baselineY, maxBarHeight) {
+  const n = marks.length;
+  if (n < 2) return;
 
-  let weightedSum = bins.reduce((acc, count, idx) => acc + count * (idx * 10 + 5), 0);
-  let mean = weightedSum / totalN;
+  const mean = marks.reduce((a, b) => a + b, 0) / n;
+  const variance = marks.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / n;
+  const stdDev = Math.sqrt(variance) || 12;
 
-  let variance = bins.reduce((acc, count, idx) => {
-    let center = idx * 10 + 5;
-    return acc + count * Math.pow(center - mean, 2);
-  }, 0) / totalN;
-
-  let stdDev = Math.sqrt(variance) || 15;
-
+  ctx.save();
   ctx.strokeStyle = "#ef4444";
   ctx.lineWidth = 2.5;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
   ctx.beginPath();
 
-  const maxCanvasX = Math.floor(100 * progress);
-  let firstPoint = true;
+  const totalScoreRange = 100;
+  const maxScoreToDraw = totalScoreRange * progress;
+  let isFirstPoint = true;
 
-  for (let x = 0; x <= maxCanvasX; x += 1) {
-    let pdf = (1 / (stdDev * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mean) / stdDev, 2));
-    let peakPdf = (1 / (stdDev * Math.sqrt(2 * Math.PI)));
-    let normHeight = (pdf / peakPdf) * 115;
+  for (let mark = 0; mark <= maxScoreToDraw; mark += 0.5) {
+    const pdf = (1 / (stdDev * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((mark - mean) / stdDev, 2));
 
-    let canvasX = 32 + (x / 100) * 324 + 12;
-    let canvasY = 175 - normHeight;
+    const expectedBinCount = pdf * n * 10;
+    const normHeight = (expectedBinCount / maxFreq) * maxBarHeight;
 
-    if (firstPoint) {
-      ctx.moveTo(canvasX, canvasY);
-      firstPoint = false;
+    const binIndex = mark / 10;
+    const pixelX = startX + binIndex * (barWidth + gap);
+    const pixelY = baselineY - normHeight;
+
+    if (isFirstPoint) {
+      ctx.moveTo(pixelX, pixelY);
+      isFirstPoint = false;
     } else {
-      ctx.lineTo(canvasX, canvasY);
+      ctx.lineTo(pixelX, pixelY);
     }
   }
+
   ctx.stroke();
+  ctx.restore();
 }
 
 function computeStats() {
@@ -1390,6 +1470,15 @@ function computeGradeSummary() {
     gradeSummaryDiv.appendChild(span);
     previousSummary[g] = counts[g];
   });
+
+  const badgeEl = document.getElementById("activeFilterBadge");
+  if (badgeEl) {
+    if (activeGradeFilters.size === 0) {
+      badgeEl.innerText = "All";
+    } else {
+      badgeEl.innerText = `Filtering: ${Array.from(activeGradeFilters).join(", ")}`;
+    }
+  }
 }
 
 function renderRoster() {
@@ -1499,7 +1588,7 @@ function toggleSelectAll(masterCert) {
 
 function toggleAbsent(studentId, isAbsent) {
   absentOverrides[studentId] = isAbsent;
-  logAudit(`Toggled Absent status for ${studentId} to ${isAbsent}`);
+  logAudit(`Marked student ${studentId} as ${isAbsent ? 'ABSENT/NC' : 'PRESENT/ACTIVE'}`);
   updateAll();
 }
 
@@ -1508,10 +1597,11 @@ function toggleBulkAbsent() {
     alert("Please select students using checkboxes first.");
     return;
   }
+  const studentList = Array.from(selectedStudents).join(", ");
   selectedStudents.forEach(sId => {
     absentOverrides[sId] = !absentOverrides[sId];
   });
-  logAudit(`Bulk toggled absent status for ${selectedStudents.size} students`);
+  logAudit(`Bulk toggled absent status for students: [${studentList}]`);
   updateAll();
 }
 
@@ -1541,7 +1631,7 @@ function saveOverride() {
     timestamp: new Date().toISOString()
   };
 
-  logAudit(`Overrode grade for ${currentEditingStudentId} to ${overrideGrade} (Reason: ${reason})`);
+  logAudit(`Grade OVERRIDE applied for student ${currentEditingStudentId} ➔ Grade: '${overrideGrade}' | Reason: "${reason}"`);
   closeOverrideModal();
   updateAll();
 }
