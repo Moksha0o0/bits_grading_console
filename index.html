@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BITS Pilani Digital – Advanced Grading Console (CodeForge V2.0)</title>
 
+<!-- Website Favicon Icon -->
+<link rel="icon" type="image/png" href="logo.png">
+
 <!-- Data Export & Charting Libraries -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.net/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -87,13 +90,18 @@ header {
   width: 44px;
   height: 44px;
   background: var(--primary);
-  color: white;
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: 18px;
+  overflow: hidden;
+  padding: 4px;
+}
+
+.header-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 header h1 {
@@ -235,7 +243,6 @@ input:focus, select:focus {
   font-weight: 700;
 }
 
-/* Spinner for file loading state */
 .spinner-icon {
   display: inline-block;
   width: 18px;
@@ -361,7 +368,6 @@ button:disabled {
   margin-top: 2px;
 }
 
-/* ===== ENHANCED FILTER PROMPT & SUMMARY ===== */
 .filter-instruction-bar {
   margin-top: 16px;
   margin-bottom: 8px;
@@ -677,7 +683,9 @@ button.enabled {
 
 <header>
   <div class="header-brand">
-    <div class="header-logo-placeholder">BITS</div>
+    <div class="header-logo-placeholder">
+      <img src="logo.png" alt="BITS Logo" class="header-logo-img">
+    </div>
     <div>
       <h1>BITS Pilani Digital</h1>
       <h2>Advanced Grading Console v2.0 (CodeForge)</h2>
@@ -1324,7 +1332,6 @@ function drawHistogram() {
   const primaryColor = isDark ? "#818cf8" : "#5b3cc4";
   const textColor = isDark ? "#94a3b8" : "#6b7280";
 
-  // Dimensions for pixel alignment
   const barWidth = 26;
   const gap = 11;
   const startX = 20;
@@ -1336,7 +1343,6 @@ function drawHistogram() {
     const p = Math.min((ts - start) / 350, 1);
     ctx.clearRect(0, 0, 400, 220);
 
-    // Draw Histogram Bars
     bins.forEach((v, i) => {
       const h = (v / maxFreq) * maxBarHeight * p;
       const x = startX + i * (barWidth + gap);
@@ -1356,14 +1362,12 @@ function drawHistogram() {
         ctx.fill();
       }
 
-      // X-Axis Labels
       ctx.fillStyle = textColor;
       ctx.font = "600 10px 'Segoe UI', sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(`${i * 10}-${i * 10 + 9}`, x + barWidth / 2, 192);
     });
 
-    // Draw Normal Distribution Curve
     if (marks.length >= 2) {
       drawFittedCurve(ctx, marks, p, maxFreq, startX, barWidth, gap, baselineY, maxBarHeight);
     }
